@@ -45,6 +45,8 @@ pub struct AiConfig {
     pub provider: String,
     /// Model identifier (e.g. `"gpt-4o"`, `"claude-3-5-sonnet-20241022"`).
     pub model: String,
+    /// Ordered list of fallback models to try if the primary fails.
+    pub fallback_models: Vec<String>,
     /// API key for the provider. `None` for local / anonymous providers.
     pub api_key: Option<String>,
     /// Custom API endpoint URL. Defaults to the provider's official endpoint.
@@ -60,6 +62,7 @@ impl Default for AiConfig {
         Self {
             provider: "ollama".to_string(),
             model: "llama3.2".to_string(),
+            fallback_models: Vec::new(),
             api_key: None,
             endpoint: "http://localhost:11434".to_string(),
             max_tokens: 4096,
