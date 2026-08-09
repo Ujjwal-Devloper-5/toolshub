@@ -18,9 +18,9 @@ version       = "0.1.0"
 edition       = "2021"
 authors       = ["ToolsHub Contributors"]
 license       = "Apache-2.0"
-repository    = "https://github.com/toolshub/toolshub"
-homepage      = "https://toolshub.dev"
-documentation = "https://docs.toolshub.dev"
+repository    = "https://github.com/Ujjwal-Devloper-5/toolshub"
+homepage      = "https://github.com/Ujjwal-Devloper-5/toolshub"
+documentation = "https://github.com/Ujjwal-Devloper-5/toolshub"
 keywords      = ["cli", "ai", "package-manager", "terminal", "tools"]
 categories    = ["command-line-utilities", "development-tools"]
 

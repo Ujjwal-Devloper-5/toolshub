@@ -41,7 +41,7 @@ It is **not** a generic web chatbot. It is an intelligent, context-aware operati
 ### Quick Install Script
 Install the pre-compiled binary via curl:
 ```bash
-curl -fsSL https://toolshub.dev/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Ujjwal-Devloper-5/toolshub/master/install/install.sh | bash
 ```
 
 ### Install with Cargo

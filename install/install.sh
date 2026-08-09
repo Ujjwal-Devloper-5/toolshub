@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # ToolsHub Universal Installer
 # Supports: Linux (Arch, Debian/Ubuntu, Fedora, Alpine), macOS, Windows (WSL)
-# Usage: curl -fsSL https://toolshub.dev/install.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/Ujjwal-Devloper-5/toolshub/master/install/install.sh | bash
 
 set -euo pipefail
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
-REPO="https://github.com/toolshub/toolshub"
+REPO="https://github.com/Ujjwal-Devloper-5/toolshub"
 BINARY_NAME="toolshub"
 INSTALL_DIR="${TOOLSHUB_INSTALL_DIR:-$HOME/.local/bin}"
 VERSION="${TOOLSHUB_VERSION:-latest}"
@@ -294,7 +294,7 @@ print_next_steps() {
     echo -e "    ${CYAN}toolshub doctor${RESET}           — diagnose your setup"
     echo ""
     echo -e "  ${BOLD}Config:${RESET} ${CONFIG_DIR}/config.toml"
-    echo -e "  ${BOLD}Docs:${RESET}   https://docs.toolshub.dev"
+    echo -e "  ${BOLD}Docs:${RESET}   https://github.com/Ujjwal-Devloper-5/toolshub"
     echo ""
 }
 
