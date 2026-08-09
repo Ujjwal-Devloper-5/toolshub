@@ -194,7 +194,7 @@ impl Default for DisplayConfig {
 ///
 /// Loaded from `~/.config/toolshub/config.toml` and composed of several
 /// nested sections, each of which falls back to sensible defaults.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Config {
     /// General UI and locale settings.
@@ -209,19 +209,6 @@ pub struct Config {
     pub safety: SafetyConfig,
     /// Terminal display preferences.
     pub display: DisplayConfig,
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            general: GeneralConfig::default(),
-            ai: AiConfig::default(),
-            memory: MemoryConfig::default(),
-            package: PackageConfig::default(),
-            safety: SafetyConfig::default(),
-            display: DisplayConfig::default(),
-        }
-    }
 }
 
 impl Config {

@@ -262,15 +262,13 @@ fn handle_key(key: event::KeyEvent, state: &mut AppState) {
         }
 
         // Submit.
-        (KeyCode::Enter, _) => {
-            if state.focus == Focus::Input && !state.input.trim().is_empty() {
-                let cmd = state.input.clone();
-                state.output.push(format!("  > {cmd}"));
-                state.output.push("  Processing…".into());
-                state.input.clear();
-                state.cursor = 0;
-                state.status = format!("Sent: {}", cmd.trim());
-            }
+        (KeyCode::Enter, _) if state.focus == Focus::Input && !state.input.trim().is_empty() => {
+            let cmd = state.input.clone();
+            state.output.push(format!("  > {cmd}"));
+            state.output.push("  Processing…".into());
+            state.input.clear();
+            state.cursor = 0;
+            state.status = format!("Sent: {}", cmd.trim());
         }
 
         _ => {}
