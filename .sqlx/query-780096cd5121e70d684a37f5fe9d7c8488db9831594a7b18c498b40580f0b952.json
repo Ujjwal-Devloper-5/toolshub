@@ -1,0 +1,56 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT id, category, key, value, confidence, created_at, updated_at\n            FROM   facts\n            WHERE  category = ?\n            ORDER BY key\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "category",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "key",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "value",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "confidence",
+        "ordinal": 4,
+        "type_info": "Float"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "updated_at",
+        "ordinal": 6,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "780096cd5121e70d684a37f5fe9d7c8488db9831594a7b18c498b40580f0b952"
+}

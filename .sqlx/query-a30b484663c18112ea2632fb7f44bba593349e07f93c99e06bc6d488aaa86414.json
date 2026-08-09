@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM facts WHERE category = ? AND key = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "a30b484663c18112ea2632fb7f44bba593349e07f93c99e06bc6d488aaa86414"
+}

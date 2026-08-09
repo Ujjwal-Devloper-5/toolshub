@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM conversation_summaries",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "1543d21809905a49af4c0e8c7018e73efa6245edae3e19a99ae806157d0630c5"
+}

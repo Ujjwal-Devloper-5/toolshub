@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT id, tool_name, command, directory, exit_code, used_at\n            FROM   tool_usage\n            ORDER  BY used_at DESC\n            LIMIT  ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "tool_name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "command",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "directory",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "exit_code",
+        "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "used_at",
+        "ordinal": 5,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "a92d703665eae64c1c4d356afe1f4652569cb0a60d996fb307cd56a11cb14491"
+}

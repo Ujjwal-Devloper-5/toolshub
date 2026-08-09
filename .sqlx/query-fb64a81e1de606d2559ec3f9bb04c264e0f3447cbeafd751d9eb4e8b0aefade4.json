@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM doc_cache WHERE expires_at <= ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "fb64a81e1de606d2559ec3f9bb04c264e0f3447cbeafd751d9eb4e8b0aefade4"
+}

@@ -1,0 +1,43 @@
+[Unit]
+Description=ToolsHub Background Daemon
+Documentation=https://github.com/toolshub/toolshub
+After=network.target graphical-session.target
+Wants=network.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/toolshub daemon
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=10
+
+# Resource limits — keep memory footprint tiny
+MemoryMax=100M
+CPUWeight=10
+IOWeight=10
+TasksMax=32
+
+# Security hardening
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/.local/share/toolshub %h/.config/toolshub
+CapabilityBoundingSet=
+AmbientCapabilities=
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RemoveIPC=true
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=toolshub
+
+[Install]
+WantedBy=default.target

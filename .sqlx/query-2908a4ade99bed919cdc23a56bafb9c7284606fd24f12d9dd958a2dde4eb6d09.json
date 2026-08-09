@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO facts (id, category, key, value, confidence, created_at, updated_at)\n            VALUES (?, ?, ?, ?, ?, ?, ?)\n            ON CONFLICT (category, key) DO UPDATE SET\n                value      = excluded.value,\n                confidence = excluded.confidence,\n                updated_at = excluded.updated_at\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": []
+  },
+  "hash": "2908a4ade99bed919cdc23a56bafb9c7284606fd24f12d9dd958a2dde4eb6d09"
+}

@@ -1,0 +1,44 @@
+# ==============================================================================
+# ToolsHub Git Ignore Rules
+# ==============================================================================
+
+# Cargo build outputs
+target/
+
+# Environment configuration files
+.env
+.env.local
+.env.*.local
+
+# SQLite databases & test database files
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+.test.db
+
+# Temporary & intermediate files
+*.tmp
+*.temp
+*.log
+pod2htmd.tmp
+
+# Test keys & certificates
+rsa_priv.txt
+rsa_pub.txt
+*.pem
+*.key
+
+# Generated documentation artifacts
+version.pdf
+version.ps
+
+# Agent metadata and workspace artifacts
+.agents/
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store

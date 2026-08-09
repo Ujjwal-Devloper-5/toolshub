@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO doc_cache (id, tool_name, content, source, cached_at, expires_at)\n            VALUES (?, ?, ?, ?, ?, ?)\n            ON CONFLICT (tool_name) DO UPDATE SET\n                content    = excluded.content,\n                source     = excluded.source,\n                cached_at  = excluded.cached_at,\n                expires_at = excluded.expires_at\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "2f2208618d09a5653b81a8afa9bd9cc6557e627bcbf32ddad2850f153e63d718"
+}

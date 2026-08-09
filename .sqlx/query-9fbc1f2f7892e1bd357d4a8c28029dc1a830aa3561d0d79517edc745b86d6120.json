@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT id, summary, topics, created_at\n            FROM   conversation_summaries\n            ORDER  BY created_at DESC\n            LIMIT  ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "summary",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "topics",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 3,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "9fbc1f2f7892e1bd357d4a8c28029dc1a830aa3561d0d79517edc745b86d6120"
+}

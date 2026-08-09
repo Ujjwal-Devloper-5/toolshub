@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT value FROM facts WHERE category = ? AND key = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "value",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "0e3d52f263b6eb5cf6809c2f48d685d3d72dbd36b05d1e92b37727f6774b9c14"
+}

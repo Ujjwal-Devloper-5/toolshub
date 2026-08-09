@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO tool_usage (id, tool_name, command, directory, exit_code, used_at)\n            VALUES (?, ?, ?, ?, ?, ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "179f1654d62162da6418b397004b3f6600b9a7084bc00f2437bad5bae172b707"
+}

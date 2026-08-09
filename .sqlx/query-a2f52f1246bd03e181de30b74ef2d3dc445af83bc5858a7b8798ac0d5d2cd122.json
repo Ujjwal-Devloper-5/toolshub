@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, tool_name, content, source, cached_at, expires_at FROM doc_cache ORDER BY cached_at DESC",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "tool_name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "content",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "source",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "cached_at",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "expires_at",
+        "ordinal": 5,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "a2f52f1246bd03e181de30b74ef2d3dc445af83bc5858a7b8798ac0d5d2cd122"
+}

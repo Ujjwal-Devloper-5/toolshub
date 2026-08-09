@@ -1,0 +1,39 @@
+[package]
+name    = "toolshub-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "ToolsHub — The Intelligent CLI Operating Companion"
+default-run = "toolshub"
+
+[[bin]]
+name = "toolshub"
+path = "src/main.rs"
+
+[dependencies]
+toolshub-core    = { path = "../toolshub-core" }
+toolshub-env     = { path = "../toolshub-env" }
+toolshub-memory  = { path = "../toolshub-memory" }
+toolshub-ai      = { path = "../toolshub-ai" }
+toolshub-package = { path = "../toolshub-package" }
+toolshub-doc     = { path = "../toolshub-doc" }
+toolshub-context = { path = "../toolshub-context" }
+toolshub-safety  = { path = "../toolshub-safety" }
+toolshub-tui     = { path = "../toolshub-tui" }
+
+clap               = { workspace = true }
+tokio              = { workspace = true }
+serde              = { workspace = true }
+serde_json         = { workspace = true }
+tracing            = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow             = { workspace = true }
+chrono             = { workspace = true }
+dirs               = { workspace = true }
+colored            = { workspace = true }
+indicatif          = { workspace = true }
+dialoguer          = { workspace = true }
+console            = { workspace = true }
+which              = { workspace = true }
+uuid               = { workspace = true }

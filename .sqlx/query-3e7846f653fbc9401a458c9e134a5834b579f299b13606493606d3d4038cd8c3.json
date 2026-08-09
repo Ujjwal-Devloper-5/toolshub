@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM doc_cache",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "3e7846f653fbc9401a458c9e134a5834b579f299b13606493606d3d4038cd8c3"
+}
