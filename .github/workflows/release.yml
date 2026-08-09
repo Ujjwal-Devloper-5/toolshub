@@ -28,7 +28,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           name: ToolsHub ${{ steps.version.outputs.VERSION }}
-          body_path: CHANGELOG.md
+          generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref, '-') }}
         env:
