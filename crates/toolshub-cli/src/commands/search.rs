@@ -95,16 +95,16 @@ pub async fn run(
         println!("  {}", "─".repeat(60).dimmed());
 
         // Column widths
-        let name_w = results.iter().map(|r| r.name.len()).max().unwrap_or(10).min(30).max(10);
+        let name_w = results.iter().map(|r| r.name.len()).max().unwrap_or(10).clamp(10, 30);
         let ver_w = 12usize;
         let desc_w = 56usize.saturating_sub(name_w + ver_w + 4);
 
         // Header
         println!(
             "  {:<nw$}  {:<vw$}  {}",
-            "NAME".bold().to_string(),
-            "VERSION".bold().to_string(),
-            "DESCRIPTION".bold().to_string(),
+            "NAME".bold(),
+            "VERSION".bold(),
+            "DESCRIPTION".bold(),
             nw = name_w,
             vw = ver_w,
         );

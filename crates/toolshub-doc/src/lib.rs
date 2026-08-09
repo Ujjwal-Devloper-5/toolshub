@@ -328,12 +328,7 @@ fn find_tldr_dir() -> Option<PathBuf> {
         Some(PathBuf::from("/usr/local/share/tldr")),
     ];
 
-    for c in candidates.into_iter().flatten() {
-        if c.exists() {
-            return Some(c);
-        }
-    }
-    None
+    candidates.into_iter().flatten().find(|c| c.exists())
 }
 
 // ── Formatting helpers ────────────────────────────────────────────────────────

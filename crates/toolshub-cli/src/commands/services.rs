@@ -51,12 +51,11 @@ async fn run_linux(filter: Option<&str>, failed_only: bool) -> anyhow::Result<()
         "  {} {} service(s){}{}",
         "◆".cyan().bold(),
         filtered.len().to_string().bold(),
-        if failed_only { " (failed only)" } else { "" }.red().to_string(),
+        if failed_only { " (failed only)" } else { "" }.red(),
         filter
             .map(|f| format!(" (filter: \"{}\")", f))
             .unwrap_or_default()
             .dimmed()
-            .to_string()
     );
     println!();
 
@@ -65,7 +64,7 @@ async fn run_linux(filter: Option<&str>, failed_only: bool) -> anyhow::Result<()
         return Ok(());
     }
 
-    let name_w = filtered.iter().map(|s| s.name.len()).max().unwrap_or(20).min(40).max(20);
+    let name_w = filtered.iter().map(|s| s.name.len()).max().unwrap_or(20).clamp(20, 40);
     let load_w = 10usize;
     let active_w = 10usize;
     let sub_w = 12usize;

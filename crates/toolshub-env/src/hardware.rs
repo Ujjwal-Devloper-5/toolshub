@@ -70,7 +70,7 @@ async fn detect_cpu_linux() -> (Option<String>, usize) {
     let model = contents
         .lines()
         .find(|l| l.starts_with("model name"))
-        .and_then(|l| l.splitn(2, ':').nth(1))
+        .and_then(|l| l.split_once(':').map(|x| x.1))
         .map(|s| s.trim().to_string());
 
     let cores = contents
@@ -216,7 +216,7 @@ async fn detect_gpu_linux() -> Option<String> {
             return stdout
                 .lines()
                 .find(|l| l.contains("OpenGL renderer"))
-                .and_then(|l| l.splitn(2, ':').nth(1))
+                .and_then(|l| l.split_once(':').map(|x| x.1))
                 .map(|s| s.trim().to_string());
         }
     }

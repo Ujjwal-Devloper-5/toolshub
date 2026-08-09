@@ -319,10 +319,10 @@ fn matches_rule(command: &str, rule: &SafetyRule) -> bool {
         return true;
     }
 
-    if rule.label == "Remote Code Execution" || rule.pattern.contains('|') {
-        if is_remote_code_execution(command) {
-            return true;
-        }
+    if (rule.label == "Remote Code Execution" || rule.pattern.contains('|'))
+        && is_remote_code_execution(command)
+    {
+        return true;
     }
 
     false

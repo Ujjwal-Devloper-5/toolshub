@@ -41,11 +41,12 @@ fn show(config: &Config) {
     kv("model", &config.ai.model);
     kv(
         "api_key",
-        &config.ai.api_key
+        config
+            .ai
+            .api_key
             .as_deref()
             .map(|k| if k.is_empty() { "not set" } else { "***" })
-            .unwrap_or("not set")
-            .to_string(),
+            .unwrap_or("not set"),
     );
     kv("endpoint", &config.ai.endpoint);
     kv("max_tokens", &config.ai.max_tokens.to_string());

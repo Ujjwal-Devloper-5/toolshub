@@ -62,8 +62,8 @@ async fn show_facts(store: &MemoryStore) -> anyhow::Result<()> {
     println!("  {} {}", "FACTS".bold().yellow(), format!("({} total)", facts.len()).dimmed());
     println!("  {}", "─".repeat(60).dimmed());
 
-    let cat_w = facts.iter().map(|f| f.category.len()).max().unwrap_or(8).min(16).max(8);
-    let key_w = facts.iter().map(|f| f.key.len()).max().unwrap_or(12).min(24).max(12);
+    let cat_w = facts.iter().map(|f| f.category.len()).max().unwrap_or(8).clamp(8, 16);
+    let key_w = facts.iter().map(|f| f.key.len()).max().unwrap_or(12).clamp(12, 24);
 
     println!(
         "  {:<cw$}  {:<kw$}  {}",
@@ -167,7 +167,7 @@ async fn show_cache(store: &MemoryStore) -> anyhow::Result<()> {
         return Ok(());
     }
 
-    let tool_w = entries.iter().map(|e| e.tool_name.len()).max().unwrap_or(10).min(24).max(10);
+    let tool_w = entries.iter().map(|e| e.tool_name.len()).max().unwrap_or(10).clamp(10, 24);
 
     println!(
         "  {:<tw$}  {:<16}  {:<20}  {}",

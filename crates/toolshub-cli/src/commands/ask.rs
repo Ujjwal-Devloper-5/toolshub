@@ -144,10 +144,10 @@ fn render_answer(text: &str) {
         }
         if in_code {
             println!("  {} {}", "│".dimmed(), line.green());
-        } else if line.starts_with("# ") {
-            println!("  {}", line[2..].bold().yellow());
-        } else if line.starts_with("## ") {
-            println!("  {}", line[3..].bold().cyan());
+        } else if let Some(stripped) = line.strip_prefix("# ") {
+            println!("  {}", stripped.bold().yellow());
+        } else if let Some(stripped) = line.strip_prefix("## ") {
+            println!("  {}", stripped.bold().cyan());
         } else if line.starts_with("- ") || line.starts_with("* ") {
             println!("  {} {}", "•".cyan(), &line[2..]);
         } else if line.starts_with("**") && line.ends_with("**") {

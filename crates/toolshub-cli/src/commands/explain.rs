@@ -550,8 +550,8 @@ fn print_source_indicator(source: &ExplainSource, tool: &str) {
 }
 
 fn compute_col_widths(flags: &[Flag]) -> [usize; 3] {
-    let w0 = flags.iter().map(|f| f.flag.len()).max().unwrap_or(10).max(10).min(24);
-    let w2 = flags.iter().map(|f| f.example.len()).max().unwrap_or(20).max(20).min(32);
+    let w0 = flags.iter().map(|f| f.flag.len()).max().unwrap_or(10).clamp(10, 24);
+    let w2 = flags.iter().map(|f| f.example.len()).max().unwrap_or(20).clamp(20, 32);
     let w1 = (80usize).saturating_sub(w0 + w2 + 8).max(20);
     [w0, w1, w2]
 }

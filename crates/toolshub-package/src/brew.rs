@@ -204,7 +204,7 @@ impl PackageManager for BrewManager {
             // The Cellar path contains the version as the last path component before ':'
             if l.contains("/Cellar/") && l.contains(':') {
                 let path_part = l.split(':').next()?;
-                path_part.split('/').last().map(|s| s.to_string())
+                path_part.split('/').next_back().map(|s| s.to_string())
             } else {
                 None
             }

@@ -93,7 +93,7 @@ fn render_compact(tools: &[&InstalledTool]) {
 }
 
 fn render_table(tools: &[&InstalledTool]) {
-    let name_w = tools.iter().map(|t| t.name.len()).max().unwrap_or(10).min(28).max(10);
+    let name_w = tools.iter().map(|t| t.name.len()).max().unwrap_or(10).clamp(10, 28);
     let ver_w = 14usize;
     let pm_w = 10usize;
     let path_w = 44usize;
