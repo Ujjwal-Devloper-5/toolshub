@@ -45,6 +45,10 @@ static CANDIDATES: &[(&str, PackageManagerKind, &str)] = &[
 ///
 /// Returns only managers whose binary was found **and** whose `--version`
 /// invocation succeeded (exit status 0).
+///
+/// Security: Only executes binaries located in trusted system directories
+/// to prevent a malicious binary named `apt` or `brew` in a project's local
+/// directory from being automatically run during environment detection.
 pub async fn detect_package_managers() -> Vec<DetectedPackageManager> {
     let mut detected = Vec::new();
 
@@ -55,6 +59,16 @@ pub async fn detect_package_managers() -> Vec<DetectedPackageManager> {
                 continue;
             }
             Ok(path) => {
+                // Security check: only probe binaries in trusted directories.
+                if !is_trusted_path(&path) {
+                    warn!(
+                        binary = %binary,
+                        path = %path.display(),
+                        "Skipping binary in untrusted location (not in a system directory)"
+                    );
+                    continue;
+                }
+
                 debug!(binary = %binary, path = %path.display(), "Found binary, probing version");
                 let version = probe_version(binary, version_flag).await;
                 detected.push(DetectedPackageManager {
@@ -68,6 +82,33 @@ pub async fn detect_package_managers() -> Vec<DetectedPackageManager> {
 
     debug!(count = detected.len(), "Package manager detection complete");
     detected
+}
+
+/// Return `true` if the binary path starts with a known trusted prefix.
+///
+/// Trusted prefixes cover standard system locations on Linux, macOS, and
+/// common tool install paths (Homebrew, Cargo, pyenv, etc.).
+fn is_trusted_path(path: &std::path::Path) -> bool {
+    const TRUSTED_PREFIXES: &[&str] = &[
+        "/usr/bin",
+        "/usr/local/bin",
+        "/usr/sbin",
+        "/bin",
+        "/sbin",
+        "/opt/homebrew",       // macOS Homebrew (Apple Silicon)
+        "/usr/local/Cellar",   // macOS Homebrew (Intel)
+        "/opt/local",          // MacPorts
+        "/nix/store",          // Nix
+        "/home",               // user-local installs (~/.local/bin, ~/.cargo/bin, etc.)
+        "/root",               // root user equivalents
+        "/snap",               // Snap packages
+        "/var/lib/flatpak",    // Flatpak
+    ];
+
+    let path_str = path.to_string_lossy();
+    TRUSTED_PREFIXES
+        .iter()
+        .any(|prefix| path_str.starts_with(prefix))
 }
 
 /// Run `<binary> <flag>` and return the first non-empty output line,

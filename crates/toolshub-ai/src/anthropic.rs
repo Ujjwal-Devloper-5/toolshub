@@ -129,7 +129,8 @@ impl AiProvider for AnthropicProvider {
             system: system_prompt,
             messages: turns,
             max_tokens: req.max_tokens,
-            temperature: req.temperature,
+            // Anthropic caps temperature at 1.0; clamp to avoid a 400 error.
+            temperature: req.temperature.clamp(0.0, 1.0),
         };
 
         debug!("POST {url}");

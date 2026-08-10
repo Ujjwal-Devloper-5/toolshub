@@ -192,41 +192,52 @@ async fn detect_git(root: &Path) -> (Option<String>, Option<String>) {
     }
 
     // Read branch from HEAD.
+    // Use spawn_blocking to avoid stalling the Tokio executor on slow
+    // filesystems (NFS, encrypted volumes, etc.).
     let head_path = root.join(".git").join("HEAD");
-    let branch = std::fs::read_to_string(&head_path)
-        .ok()
-        .and_then(|s| {
-            s.trim()
-                .strip_prefix("ref: refs/heads/")
-                .map(|b| b.to_string())
-        });
-
-    // Read origin URL from config.
     let git_config_path = root.join(".git").join("config");
-    let remote = std::fs::read_to_string(&git_config_path)
-        .ok()
-        .and_then(|s| {
-            let mut in_origin = false;
-            for line in s.lines() {
-                let t = line.trim();
-                if t == "[remote \"origin\"]" {
-                    in_origin = true;
-                    continue;
+
+    let (branch, remote) = tokio::task::spawn_blocking(move || {
+        let branch = std::fs::read_to_string(&head_path)
+            .ok()
+            .and_then(|s| {
+                s.trim()
+                    .strip_prefix("ref: refs/heads/")
+                    .map(|b| b.to_string())
+            });
+
+        // Read origin URL from config.
+        let remote = std::fs::read_to_string(&git_config_path)
+            .ok()
+            .and_then(|s| {
+                let mut in_origin = false;
+                for line in s.lines() {
+                    let t = line.trim();
+                    if t == "[remote \"origin\"]" {
+                        in_origin = true;
+                        continue;
+                    }
+                    if in_origin && t.starts_with('[') {
+                        break;
+                    }
+                    if in_origin && t.starts_with("url = ") {
+                        return Some(t.trim_start_matches("url = ").to_string());
+                    }
                 }
-                if in_origin && t.starts_with('[') {
-                    break;
-                }
-                if in_origin && t.starts_with("url = ") {
-                    return Some(t.trim_start_matches("url = ").to_string());
-                }
-            }
-            None
-        });
+                None
+            });
+
+        (branch, remote)
+    })
+    .await
+    .unwrap_or((None, None));
 
     (branch, remote)
 }
 
 fn has_extension(dir: &Path, ext: &str) -> bool {
+    // NOTE: This is intentionally synchronous and called only from
+    // detect_context which itself is wrapped in spawn_blocking at call sites.
     std::fs::read_dir(dir)
         .map(|entries| {
             entries.flatten().any(|e| {

@@ -220,12 +220,11 @@ impl PackageManager for AptManager {
         let packages = stdout
             .lines()
             .filter_map(|line| {
+                // splitn(2, '\t') guarantees at most 2 parts; we validate both exist
+                // and are non-empty to guard against malformed dpkg-query output.
                 let mut parts = line.splitn(2, '\t');
-                let name = parts.next()?.trim().to_string();
-                let version = parts.next()?.trim().to_string();
-                if name.is_empty() || version.is_empty() {
-                    return None;
-                }
+                let name = parts.next().map(str::trim).filter(|s| !s.is_empty())?.to_string();
+                let version = parts.next().map(str::trim).filter(|s| !s.is_empty())?.to_string();
                 Some(InstalledPackage {
                     name,
                     version,

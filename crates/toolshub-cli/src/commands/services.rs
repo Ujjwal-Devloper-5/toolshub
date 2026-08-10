@@ -140,19 +140,73 @@ async fn list_services() -> anyhow::Result<Vec<ServiceEntry>> {
     let text = String::from_utf8_lossy(&output.stdout);
     let mut entries = Vec::new();
 
+    // Parse the header line first to determine exact column offsets.
+    // systemctl --plain output looks like:
+    //   UNIT                     LOAD   ACTIVE SUB     DESCRIPTION
+    //   <name>.service           loaded active running Some description here
+    //
+    // We find the byte-offset of each column header to slice fields safely,
+    // which avoids misalignment when state values contain spaces.
+    let mut col_load: Option<usize> = None;
+    let mut col_active: Option<usize> = None;
+    let mut col_sub: Option<usize> = None;
+    let mut col_desc: Option<usize> = None;
+    let mut header_parsed = false;
+
     for line in text.lines() {
-        // Each line format:
-        //   UNIT                   LOAD   ACTIVE SUB     DESCRIPTION
+        if !header_parsed {
+            if line.contains("LOAD") && line.contains("ACTIVE") && line.contains("SUB") {
+                col_load   = line.find("LOAD");
+                col_active = line.find("ACTIVE");
+                col_sub    = line.find("SUB");
+                col_desc   = line.find("DESCRIPTION");
+                header_parsed = true;
+            }
+            continue;
+        }
+
+        let line_raw = line;
         let line = line.trim();
         if line.is_empty()
-            || line.starts_with("UNIT")
-            || line.starts_with("LOAD")
             || line.starts_with("To show")
             || line.starts_with("Legend:")
         {
             continue;
         }
 
+        // Use header offsets when available, fall back to whitespace splitting.
+        if let (Some(cl), Some(ca), Some(cs), Some(cd)) =
+            (col_load, col_active, col_sub, col_desc)
+        {
+            if line_raw.len() > cl {
+                let name = line_raw[..cl].trim().trim_end_matches(".service").to_string();
+                let load_end = ca.min(line_raw.len());
+                let load = line_raw[cl..load_end].trim().to_string();
+                let active_end = cs.min(line_raw.len());
+                let active = if ca < line_raw.len() {
+                    line_raw[ca..active_end].trim().to_string()
+                } else {
+                    "—".to_string()
+                };
+                let sub_end = cd.min(line_raw.len());
+                let sub = if cs < line_raw.len() {
+                    line_raw[cs..sub_end].trim().to_string()
+                } else {
+                    "—".to_string()
+                };
+                let description = if cd < line_raw.len() {
+                    line_raw[cd..].trim().to_string()
+                } else {
+                    String::new()
+                };
+                if !name.is_empty() {
+                    entries.push(ServiceEntry { name, load, active, sub, description });
+                }
+                continue;
+            }
+        }
+
+        // Fallback: whitespace split (handles malformed lines gracefully).
         let parts: Vec<&str> = line.splitn(5, char::is_whitespace)
             .filter(|s| !s.is_empty())
             .collect();

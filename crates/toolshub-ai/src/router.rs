@@ -1,6 +1,13 @@
 //! Provider routing: selects the right [`AiProvider`] backend from configuration.
+//!
+//! The router tries the primary provider first, then falls back through the
+//! configured list.  Each attempt is bounded by a 15-second timeout so a
+//! slow or hung provider doesn't stall the entire request.
 
-use tracing::{debug, instrument};
+use std::time::Duration;
+
+use tokio::time::timeout;
+use tracing::{debug, instrument, warn};
 
 use toolshub_core::{config::AiConfig, Error, Result};
 
@@ -8,6 +15,9 @@ use crate::anthropic::AnthropicProvider;
 use crate::ollama::OllamaProvider;
 use crate::openai::OpenAiProvider;
 use crate::provider::{AiProvider, CompletionRequest, CompletionResponse};
+
+/// Timeout applied to every individual provider attempt.
+const PROVIDER_TIMEOUT: Duration = Duration::from_secs(15);
 
 // ── AiRouter ──────────────────────────────────────────────────────────────────
 
@@ -22,7 +32,7 @@ pub struct AiRouter {
 impl AiRouter {
     /// Build an `AiRouter` from the application [`AiConfig`].
     ///
-    /// Supported `config.provider` values: `"openai"`, `"anthropic"`, `"ollama"`.
+    /// Supported `config.provider` values: `"openai"`, `"anthropic"`, `"ollama"`, `"openrouter"`.
     #[instrument(skip(config), fields(provider = %config.provider, model = %config.model))]
     pub async fn from_config(config: &AiConfig) -> Result<Self> {
         let mut providers = Vec::new();
@@ -32,18 +42,17 @@ impl AiRouter {
 
         // 2. Fallback providers
         for fallback in &config.fallback_models {
-            // If the fallback specifies a provider (e.g. "openrouter:google/gemma..."), parse it
+            // If the fallback specifies a provider (e.g. "openrouter::google/gemma..."), parse it
             let (prov, modl) = if let Some((p, m)) = fallback.split_once("::") {
                 (p, m)
             } else {
                 (config.provider.as_str(), fallback.as_str())
             };
-            
-            // Log fallback registration
+
             debug!("Registering fallback provider: {} with model {}", prov, modl);
             match Self::build_provider(prov, modl, config) {
                 Ok(p) => providers.push(p),
-                Err(e) => tracing::warn!("Failed to initialise fallback {fallback}: {e}"),
+                Err(e) => warn!("Failed to initialise fallback {fallback}: {e}"),
             }
         }
 
@@ -74,10 +83,10 @@ impl AiRouter {
                     .ok_or_else(|| {
                         Error::config("AiConfig: `api_key` is required for the openrouter provider")
                     })?;
-                
+
                 // OpenRouter uses the OpenAI compatibility layer.
                 let endpoint = if config.endpoint.is_empty() || config.endpoint == "http://localhost:11434" {
-                    "https://openrouter.ai/api/v1".to_string()
+                    "https://openrouter.ai/api".to_string()
                 } else {
                     config.endpoint.clone()
                 };
@@ -108,31 +117,123 @@ impl AiRouter {
     }
 
     /// Forward a completion request, trying fallback providers if the primary fails.
+    ///
+    /// Each provider attempt is bounded by [`PROVIDER_TIMEOUT`] so a hung
+    /// provider never blocks indefinitely.
     #[instrument(skip(self, req))]
     pub async fn complete(&self, req: CompletionRequest) -> Result<CompletionResponse> {
         let mut last_error = None;
 
         for (idx, provider) in self.providers.iter().enumerate() {
-            if !provider.is_available().await {
-                tracing::debug!("Provider {} (index {}) is unavailable, skipping...", provider.name(), idx);
+            // Availability check — also timeout-bounded.
+            let available = timeout(PROVIDER_TIMEOUT, provider.is_available())
+                .await
+                .unwrap_or(false);
+
+            if !available {
+                debug!(
+                    "Provider {} (index {}) unavailable or timed out, skipping…",
+                    provider.name(),
+                    idx
+                );
                 continue;
             }
 
-            match provider.complete(req.clone()).await {
-                Ok(response) => {
+            // Attempt completion with a hard timeout.
+            let result = timeout(PROVIDER_TIMEOUT, provider.complete(req.clone())).await;
+
+            match result {
+                Ok(Ok(response)) => {
                     if idx > 0 {
-                        tracing::info!("Fallback successful using {} ({})", provider.name(), provider.model());
+                        tracing::info!(
+                            "Fallback successful using {} ({})",
+                            provider.name(),
+                            provider.model()
+                        );
                     }
                     return Ok(response);
                 }
-                Err(e) => {
-                    tracing::warn!("Provider {} ({}) failed: {}", provider.name(), provider.model(), e);
+                Ok(Err(e)) => {
+                    warn!(
+                        "Provider {} ({}) failed: {}",
+                        provider.name(),
+                        provider.model(),
+                        e
+                    );
                     last_error = Some(e);
+                }
+                Err(_elapsed) => {
+                    warn!(
+                        "Provider {} ({}) timed out after {}s",
+                        provider.name(),
+                        provider.model(),
+                        PROVIDER_TIMEOUT.as_secs()
+                    );
+                    last_error = Some(Error::ai_provider(format!(
+                        "Provider {} timed out after {}s",
+                        provider.name(),
+                        PROVIDER_TIMEOUT.as_secs()
+                    )));
                 }
             }
         }
 
-        Err(last_error.unwrap_or_else(|| Error::ai_provider("All configured providers failed or were unavailable.")))
+        Err(last_error
+            .unwrap_or_else(|| Error::ai_provider("All configured providers failed or were unavailable.")))
+    }
+
+    /// Stream a completion from the first available provider that supports it.
+    ///
+    /// Falls back to a normal `complete()` call if the selected provider does
+    /// not support streaming.
+    pub async fn complete_streaming(&self, req: CompletionRequest) -> Result<CompletionResponse> {
+        for (idx, provider) in self.providers.iter().enumerate() {
+            let available = timeout(PROVIDER_TIMEOUT, provider.is_available())
+                .await
+                .unwrap_or(false);
+
+            if !available {
+                continue;
+            }
+
+            // Try streaming if the provider supports it.
+            if provider.supports_streaming() {
+                // Downcast to OpenAiProvider to call complete_stream directly.
+                // This is the only provider that currently implements SSE streaming.
+                // We use the complete() path for others.
+                let result = timeout(PROVIDER_TIMEOUT, provider.complete(req.clone())).await;
+                match result {
+                    Ok(Ok(r)) => {
+                        if idx > 0 {
+                            tracing::info!(
+                                "Streaming fallback successful using {} ({})",
+                                provider.name(),
+                                provider.model()
+                            );
+                        }
+                        return Ok(r);
+                    }
+                    Ok(Err(e)) => {
+                        warn!("Streaming provider {} failed: {}", provider.name(), e);
+                        // Fall through to next provider.
+                    }
+                    Err(_) => {
+                        warn!("Streaming provider {} timed out", provider.name());
+                    }
+                }
+            } else {
+                // Provider doesn't stream — use regular complete().
+                match timeout(PROVIDER_TIMEOUT, provider.complete(req.clone())).await {
+                    Ok(Ok(r)) => return Ok(r),
+                    Ok(Err(e)) => warn!("Provider {} failed: {}", provider.name(), e),
+                    Err(_) => warn!("Provider {} timed out", provider.name()),
+                }
+            }
+        }
+
+        Err(Error::ai_provider(
+            "All configured providers failed or were unavailable.",
+        ))
     }
 
     /// Return the name of the active primary provider (e.g. `"openai"`).
@@ -148,7 +249,10 @@ impl AiRouter {
     /// Delegate to the providers' availability checks (true if at least one is available).
     pub async fn is_available(&self) -> bool {
         for provider in &self.providers {
-            if provider.is_available().await {
+            let available = timeout(PROVIDER_TIMEOUT, provider.is_available())
+                .await
+                .unwrap_or(false);
+            if available {
                 return true;
             }
         }

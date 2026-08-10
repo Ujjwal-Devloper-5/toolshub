@@ -1,4 +1,10 @@
 //! OpenAI (and OpenAI-compatible) chat-completion provider.
+//!
+//! Supports both the standard blocking `complete()` call and a live
+//! token-streaming path via `complete_stream()`, which uses SSE to print
+//! tokens to stdout as they arrive.
+
+use std::io::Write;
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -40,6 +46,29 @@ struct OpenAiChoice {
 #[derive(Debug, Deserialize)]
 struct OpenAiChoiceMessage {
     content: String,
+}
+
+// ── SSE / streaming wire types ────────────────────────────────────────────────
+
+/// One chunk from a streaming response (`data: {...}`).
+#[derive(Debug, Deserialize)]
+struct OpenAiStreamChunk {
+    choices: Vec<OpenAiStreamChoice>,
+    /// Present on the final chunk that carries usage info.
+    usage: Option<OpenAiUsage>,
+    /// Model name may appear on the first chunk.
+    model: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct OpenAiStreamChoice {
+    delta: OpenAiStreamDelta,
+    finish_reason: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct OpenAiStreamDelta {
+    content: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -94,6 +123,127 @@ impl OpenAiProvider {
             Role::Assistant => "assistant",
         }
     }
+
+    /// Stream a completion request, printing tokens to stdout as they arrive.
+    ///
+    /// Returns the fully assembled `CompletionResponse` once the stream ends.
+    pub async fn complete_stream(&self, req: CompletionRequest) -> Result<CompletionResponse> {
+        use futures::StreamExt;
+
+        let url = format!("{}/v1/chat/completions", self.endpoint);
+
+        let messages: Vec<OpenAiMessage> = req
+            .messages
+            .iter()
+            .map(|m| OpenAiMessage {
+                role: Self::map_role(&m.role),
+                content: &m.content,
+            })
+            .collect();
+
+        let body = OpenAiRequest {
+            model: &self.model,
+            messages,
+            max_tokens: req.max_tokens,
+            temperature: req.temperature,
+            stream: true,
+        };
+
+        debug!("POST {url} (streaming)");
+
+        let resp = self
+            .client
+            .post(&url)
+            .bearer_auth(&self.api_key)
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| Error::http(format!("openai stream request failed: {e}")))?;
+
+        let status = resp.status();
+
+        if status == reqwest::StatusCode::UNAUTHORIZED {
+            return Err(Error::ai_provider(
+                "OpenAI: invalid or missing API key (HTTP 401)",
+            ));
+        }
+
+        if !status.is_success() {
+            let raw = resp
+                .text()
+                .await
+                .unwrap_or_else(|_| "<unreadable body>".into());
+
+            if let Ok(err) = serde_json::from_str::<OpenAiError>(&raw) {
+                let kind = err.error.kind.as_deref().unwrap_or("unknown");
+                return Err(Error::ai_provider(format!(
+                    "OpenAI error [{kind}]: {}",
+                    err.error.message
+                )));
+            }
+
+            return Err(Error::ai_provider(format!("OpenAI HTTP {status}: {raw}")));
+        }
+
+        // Walk the SSE stream, collecting tokens.
+        let mut full_content = String::new();
+        let mut model_name = self.model.clone();
+        let mut prompt_tokens = 0u32;
+        let mut completion_tokens = 0u32;
+
+        let mut byte_stream = resp.bytes_stream();
+        let mut buffer = String::new();
+
+        while let Some(chunk_result) = byte_stream.next().await {
+            let chunk = chunk_result
+                .map_err(|e| Error::http(format!("stream read error: {e}")))?;
+            buffer.push_str(&String::from_utf8_lossy(&chunk));
+
+            // Process all complete lines in the buffer.
+            while let Some(newline_pos) = buffer.find('\n') {
+                let line = buffer[..newline_pos].trim().to_string();
+                buffer = buffer[newline_pos + 1..].to_string();
+
+                if line.is_empty() || line == "data: [DONE]" {
+                    continue;
+                }
+
+                let data = line.strip_prefix("data: ").unwrap_or(&line);
+
+                if let Ok(chunk_json) = serde_json::from_str::<OpenAiStreamChunk>(data) {
+                    if let Some(m) = chunk_json.model {
+                        model_name = m;
+                    }
+                    if let Some(usage) = chunk_json.usage {
+                        prompt_tokens = usage.prompt_tokens;
+                        completion_tokens = usage.completion_tokens;
+                    }
+                    for choice in chunk_json.choices {
+                        if choice.finish_reason.is_some() {
+                            continue;
+                        }
+                        if let Some(token) = choice.delta.content {
+                            full_content.push_str(&token);
+                            // Print each token immediately — this is what makes
+                            // the output feel live and responsive.
+                            print!("{token}");
+                            let _ = std::io::stdout().flush();
+                        }
+                    }
+                }
+            }
+        }
+
+        // Ensure the terminal moves past the streamed content.
+        println!();
+
+        Ok(CompletionResponse {
+            content: full_content,
+            model: model_name,
+            prompt_tokens,
+            completion_tokens,
+        })
+    }
 }
 
 #[async_trait]
@@ -128,7 +278,7 @@ impl AiProvider for OpenAiProvider {
             messages,
             max_tokens: req.max_tokens,
             temperature: req.temperature,
-            stream: false, // streaming not handled in complete()
+            stream: false,
         };
 
         debug!("POST {url}");
