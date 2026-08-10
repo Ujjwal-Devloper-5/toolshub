@@ -125,7 +125,7 @@ check_dependencies() {
 resolve_version() {
     if [ "$VERSION" = "latest" ]; then
         info "Resolving latest version..."
-        VERSION=$(curl -fsSL "https://api.github.com/repos/toolshub/toolshub/releases/latest" \
+        VERSION=$(curl -fsSL "https://api.github.com/repos/Ujjwal-Devloper-5/toolshub/releases/latest" \
             | grep '"tag_name"' \
             | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/')
         [ -z "$VERSION" ] && fatal "Could not determine latest version."
