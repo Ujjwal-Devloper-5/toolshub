@@ -137,7 +137,7 @@ resolve_version() {
 # ── Download ──────────────────────────────────────────────────────────────────
 
 download_binary() {
-    DOWNLOAD_URL="${REPO}/releases/download/${VERSION}/toolshub-${TARGET}.tar.gz"
+    DOWNLOAD_URL="${REPO}/releases/download/${VERSION}/toolshub-${VERSION}-${TARGET}.tar.gz"
     TMP_DIR=$(mktemp -d)
     TMP_ARCHIVE="${TMP_DIR}/toolshub.tar.gz"
 
