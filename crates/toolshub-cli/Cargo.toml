@@ -37,3 +37,4 @@ dialoguer          = { workspace = true }
 console            = { workspace = true }
 which              = { workspace = true }
 uuid               = { workspace = true }
+shellexpand        = { workspace = true }

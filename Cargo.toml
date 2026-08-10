@@ -69,6 +69,7 @@ indicatif        = "0.17"
 dialoguer        = "0.11"
 console          = "0.15"
 textwrap         = "0.16"
+shellexpand      = "3"
 
 [profile.release]
 opt-level     = 3

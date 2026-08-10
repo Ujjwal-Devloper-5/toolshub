@@ -179,6 +179,46 @@ pub enum Commands {
     /// Launch the interactive TUI dashboard
     #[command(alias = "ui", alias = "tui")]
     Dashboard,
+
+    /// Generate a shell hook for automatic safety checking
+    Hook {
+        /// Shell to generate the hook for
+        #[arg(value_enum)]
+        shell: commands::hook::Shell,
+        /// Auto-install the hook into your shell's rc file
+        #[arg(long)]
+        install: bool,
+    },
+
+    /// Show a timeline of commands run through ToolsHub
+    #[command(alias = "hist", alias = "log")]
+    History {
+        /// Maximum number of entries to show
+        #[arg(short, long, default_value = "50")]
+        limit: u32,
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// AI-powered command sequence planner
+    #[command(alias = "plan")]
+    Suggest {
+        /// Your goal in natural language
+        #[arg(trailing_var_arg = true, required = true)]
+        goal: Vec<String>,
+    },
+
+    /// AI-powered shell alias generator
+    #[command(alias = "al")]
+    Alias {
+        /// Description of what you want the alias to do
+        #[arg(trailing_var_arg = true, required = true)]
+        description: Vec<String>,
+        /// Skip the confirmation prompt and save directly
+        #[arg(short, long)]
+        save: bool,
+    },
 }
 
 #[derive(Debug, Subcommand)]

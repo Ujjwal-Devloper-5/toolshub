@@ -184,10 +184,12 @@ fn was_streamed_to_stdout(_content: &str) -> bool {
     false
 }
 
-// ── System prompt ─────────────────────────────────────────────────────────────
+// ── System prompt (project-aware) ────────────────────────────────────────────
 
 async fn build_system_prompt(memory: &Option<Arc<MemoryStore>>, _config: &Config) -> String {
     let mut context = String::new();
+
+    // 1. Facts from memory (OS, shell, preferences)
     if let Some(ref store) = memory {
         for cat in &["os", "shell", "preference", "project"] {
             if let Ok(facts) = store.get_facts_by_category(cat).await {
@@ -198,6 +200,15 @@ async fn build_system_prompt(memory: &Option<Arc<MemoryStore>>, _config: &Config
         }
     }
 
+    // 2. Auto-detect project type from the current working directory
+    let project_ctx = detect_project_context();
+    if !project_ctx.is_empty() {
+        context.push_str("\n  [auto-detected project context]\n");
+        for line in project_ctx.lines() {
+            context.push_str(&format!("    {line}\n"));
+        }
+    }
+
     format!(
         "You are ToolsHub, an expert CLI assistant. You help developers understand \
          and use command-line tools, package managers, and system administration \
@@ -205,6 +216,62 @@ async fn build_system_prompt(memory: &Option<Arc<MemoryStore>>, _config: &Config
          When showing commands, wrap them in backtick fences. Be concise but thorough.\
          \n\nUser system context:\n{context}"
     )
+}
+
+/// Detect the project type from marker files in the current directory.
+/// Returns a multi-line description (empty if nothing detected).
+fn detect_project_context() -> String {
+    let cwd = match std::env::current_dir() {
+        Ok(p) => p,
+        Err(_) => return String::new(),
+    };
+
+    let mut lines: Vec<String> = Vec::new();
+
+    let markers: &[(&str, &str)] = &[
+        ("Cargo.toml",         "Rust project (Cargo.toml)"),
+        ("package.json",       "Node.js project (package.json)"),
+        ("pyproject.toml",     "Python project (pyproject.toml)"),
+        ("requirements.txt",   "Python project (requirements.txt)"),
+        ("go.mod",             "Go project (go.mod)"),
+        ("pom.xml",            "Java/Maven project (pom.xml)"),
+        ("build.gradle",       "Java/Gradle project (build.gradle)"),
+        ("Makefile",           "Makefile build system"),
+        ("Dockerfile",         "Docker container project"),
+        ("docker-compose.yml", "Docker Compose project"),
+        ("flake.nix",          "Nix flake project"),
+        ("pubspec.yaml",       "Flutter/Dart project"),
+        ("Gemfile",            "Ruby project (Gemfile)"),
+        ("mix.exs",            "Elixir/Phoenix project"),
+        (".git",               "Git repository"),
+    ];
+
+    for (file, label) in markers {
+        if cwd.join(file).exists() {
+            lines.push(label.to_string());
+        }
+    }
+
+    // Extra detail for Rust: workspace vs single crate, edition
+    if cwd.join("Cargo.toml").exists() {
+        if let Ok(cargo) = std::fs::read_to_string(cwd.join("Cargo.toml")) {
+            if cargo.contains("[workspace]") {
+                lines.push("  → Rust workspace (multi-crate)".into());
+            }
+            if let Some(ed) = cargo.lines()
+                .find(|l| l.trim_start().starts_with("edition"))
+                .and_then(|l| l.split('"').nth(1))
+            {
+                lines.push(format!("  → Rust edition {ed}"));
+            }
+        }
+    }
+
+    if let Some(name) = cwd.file_name().and_then(|n| n.to_str()) {
+        lines.push(format!("Working directory: {name}"));
+    }
+
+    lines.join("\n")
 }
 
 fn no_ai_response(question: &str) -> String {

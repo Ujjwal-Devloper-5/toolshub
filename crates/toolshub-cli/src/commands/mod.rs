@@ -6,6 +6,7 @@ use std::sync::Arc;
 use tracing::debug;
 use colored::Colorize;
 
+pub mod alias_cmd;
 pub mod ask;
 pub mod config;
 pub mod context;
@@ -13,11 +14,14 @@ pub mod dashboard;
 pub mod doctor;
 pub mod env_cmd;
 pub mod explain;
+pub mod history;
+pub mod hook;
 pub mod install;
 pub mod memory_cmd;
 pub mod run_cmd;
 pub mod search;
 pub mod services;
+pub mod suggest;
 pub mod tools;
 
 /// Top-level dispatcher. Loads config, initialises subsystems, dispatches.
@@ -112,6 +116,20 @@ pub async fn dispatch(cli: Cli) -> anyhow::Result<()> {
         }
         Commands::Dashboard => {
             dashboard::run().await?;
+        }
+        Commands::Hook { shell, install } => {
+            hook::run(shell, install).await?;
+        }
+        Commands::History { limit, json } => {
+            history::run(memory, limit, json, &config).await?;
+        }
+        Commands::Suggest { goal } => {
+            let g = goal.join(" ");
+            suggest::run(&g, memory, ai, &config).await?;
+        }
+        Commands::Alias { description, save } => {
+            let desc = description.join(" ");
+            alias_cmd::run(&desc, save, memory, ai, &config).await?;
         }
     }
 
