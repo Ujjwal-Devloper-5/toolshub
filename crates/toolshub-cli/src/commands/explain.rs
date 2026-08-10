@@ -22,10 +22,12 @@ use toolshub_memory::{store::MemoryStore, ToolUsage};
 ///
 /// Fetches a structured explanation for `tool` and renders it to stdout.
 /// With `--brief` only the purpose and top-3 examples are shown.
+/// With `--examples` only the numbered examples list is shown.
 #[instrument(skip(memory, ai, config))]
 pub async fn run(
     tool: &str,
     brief: bool,
+    examples_only: bool,
     memory: Option<Arc<MemoryStore>>,
     ai: Option<Arc<AiRouter>>,
     config: &Config,
@@ -34,7 +36,9 @@ pub async fn run(
 
     let explanation = fetch_explanation(tool, &memory, &ai, config).await?;
 
-    if brief {
+    if examples_only {
+        render_examples_only(&explanation, tool);
+    } else if brief {
         render_brief(&explanation, tool);
     } else {
         render_full(&explanation, tool, config);
@@ -168,7 +172,13 @@ async fn fetch_via_ai(
          2 security notes, and 3 alternatives."
     );
 
-    println!("{}", "  Thinking…".dimmed().italic());
+    // Show a spinner-style message while the AI generates.
+    println!();
+    println!("  {} Generating explanation for {}…",
+        "◈".cyan().bold(),
+        tool.bold().cyan()
+    );
+    println!();
 
     let req = CompletionRequest {
         messages: vec![
@@ -177,10 +187,12 @@ async fn fetch_via_ai(
         ],
         max_tokens: config.ai.max_tokens,
         temperature: 0.3,
-        stream: false,
+        stream: true,
     };
 
-    let resp = ai.complete(req).await?;
+    // Stream the raw structured response — the user sees the AI thinking in
+    // real time. We collect the full content for parsing afterwards.
+    let resp = ai.complete_streaming(req).await?;
     let explanation = parse_ai_response(tool, &resp.content, &resp.model);
 
     // Cache the explanation in memory.
@@ -394,6 +406,36 @@ fn render_brief(e: &ToolExplanation, tool: &str) {
 
     println!();
     print_source_indicator(&e.source, tool);
+}
+
+/// Render only the numbered examples list — useful for quick reference.
+fn render_examples_only(e: &ToolExplanation, tool: &str) {
+    println!();
+    println!(
+        "  {} {} — examples",
+        "◆".cyan().bold(),
+        tool.bold().cyan()
+    );
+    println!("  {}", "─".repeat(60).dimmed());
+
+    if e.examples.is_empty() {
+        println!("  {}", "No examples were generated.".yellow());
+    } else {
+        println!();
+        for (i, ex) in e.examples.iter().enumerate() {
+            println!(
+                "  {}  {}",
+                format!("{}.", i + 1).cyan().bold(),
+                ex.description.white().bold()
+            );
+            println!("     {} {}", "$".dimmed(), ex.command.green());
+            println!();
+        }
+    }
+
+    println!();
+    print_source_indicator(&e.source, tool);
+    println!();
 }
 
 fn render_full(e: &ToolExplanation, tool: &str, _config: &Config) {

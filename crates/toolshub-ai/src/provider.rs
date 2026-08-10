@@ -79,6 +79,19 @@ pub trait AiProvider: Send + Sync {
     /// Submit a completion request and wait for the full response.
     async fn complete(&self, req: CompletionRequest) -> Result<CompletionResponse>;
 
+    /// Stream a completion request, printing tokens to stdout as they arrive.
+    ///
+    /// The default implementation falls back to `complete()` so providers
+    /// that don't implement streaming still work correctly.
+    ///
+    /// Providers that override this (like `OpenAiProvider`) get live token
+    /// output — each token is printed immediately as it arrives, making the
+    /// experience feel instant rather than waiting for the full response.
+    async fn stream_to_stdout(&self, req: CompletionRequest) -> Result<CompletionResponse> {
+        // Default: fall back to blocking complete() — no streaming side-effects.
+        self.complete(req).await
+    }
+
     /// Return `true` if the provider can currently be reached.
     async fn is_available(&self) -> bool;
 }

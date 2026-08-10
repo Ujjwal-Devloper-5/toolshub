@@ -260,6 +260,11 @@ impl AiProvider for OpenAiProvider {
         true
     }
 
+    /// Stream tokens directly to stdout as they arrive.
+    async fn stream_to_stdout(&self, req: CompletionRequest) -> Result<CompletionResponse> {
+        self.complete_stream(req).await
+    }
+
     #[instrument(skip(self, req), fields(provider = "openai", model = %self.model))]
     async fn complete(&self, req: CompletionRequest) -> Result<CompletionResponse> {
         let url = format!("{}/v1/chat/completions", self.endpoint);

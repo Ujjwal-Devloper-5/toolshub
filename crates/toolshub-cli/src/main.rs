@@ -64,6 +64,9 @@ pub enum Commands {
         /// Show only a brief summary
         #[arg(short, long)]
         brief: bool,
+        /// Show only the examples list (great for quick reference)
+        #[arg(short, long = "examples")]
+        examples_only: bool,
     },
 
     /// Ask the AI assistant a question
@@ -150,6 +153,9 @@ pub enum Commands {
 
     /// Run a command with safety checking
     Run {
+        /// Show what would happen without actually executing the command
+        #[arg(long)]
+        dry_run: bool,
         /// Command to run (will be safety-checked first)
         #[arg(trailing_var_arg = true, required = true)]
         command: Vec<String>,

@@ -4,6 +4,7 @@ use crate::{Cli, Commands};
 use toolshub_core::config::Config;
 use std::sync::Arc;
 use tracing::debug;
+use colored::Colorize;
 
 pub mod ask;
 pub mod config;
@@ -24,10 +25,21 @@ pub async fn dispatch(cli: Cli) -> anyhow::Result<()> {
     debug!("dispatching command: {:?}", cli.command);
 
     // Load configuration (creates default if missing)
-    let config = Config::load().unwrap_or_else(|e| {
-        eprintln!("Warning: could not load config ({}), using defaults.", e);
-        Config::default()
-    });
+    let config = match Config::load() {
+        Ok(cfg) => {
+            // Validate the config and surface friendly warnings.
+            if let Err(warnings) = validate_config(&cfg) {
+                for w in &warnings {
+                    eprintln!("  {} config: {}", "⚠".yellow(), w.yellow());
+                }
+            }
+            cfg
+        }
+        Err(e) => {
+            eprintln!("  {} Could not load config ({}), using defaults.", "⚠".yellow(), e);
+            Config::default()
+        }
+    };
 
     // Initialise memory store
     let memory = if config.memory.enabled {
@@ -35,7 +47,7 @@ pub async fn dispatch(cli: Cli) -> anyhow::Result<()> {
         match toolshub_memory::store::MemoryStore::new(&db_path).await {
             Ok(store) => Some(Arc::new(store)),
             Err(e) => {
-                eprintln!("Warning: memory store unavailable ({}), continuing without memory.", e);
+                eprintln!("  {} memory store unavailable ({}), continuing without memory.", "⚠".yellow(), e);
                 None
             }
         }
@@ -58,8 +70,8 @@ pub async fn dispatch(cli: Cli) -> anyhow::Result<()> {
 
     // Dispatch to handler
     match cli.command {
-        Commands::Explain { tool, brief } => {
-            explain::run(&tool, brief, memory, ai, &config).await?;
+        Commands::Explain { tool, brief, examples_only } => {
+            explain::run(&tool, brief, examples_only, memory, ai, &config).await?;
         }
         Commands::Ask { question } => {
             let q = question.join(" ");
@@ -86,8 +98,8 @@ pub async fn dispatch(cli: Cli) -> anyhow::Result<()> {
         Commands::Env { packages, hardware } => {
             env_cmd::run(packages, hardware).await?;
         }
-        Commands::Run { command } => {
-            run_cmd::run(&command, &config).await?;
+        Commands::Run { command, dry_run } => {
+            run_cmd::run(&command, dry_run, &config).await?;
         }
         Commands::Config { action } => {
             config::run(action, &config).await?;
@@ -104,4 +116,62 @@ pub async fn dispatch(cli: Cli) -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+// ── Config validation ─────────────────────────────────────────────────────────
+
+/// Validate the loaded config and return a list of human-friendly warnings.
+///
+/// Returns `Ok(())` if config looks correct, or `Err(Vec<String>)` with a
+/// list of warnings (non-fatal — the tool continues, but warns the user).
+fn validate_config(cfg: &Config) -> Result<(), Vec<String>> {
+    let mut warnings = Vec::new();
+
+    // AI provider checks
+    let provider = cfg.ai.provider.to_lowercase();
+    let supported_providers = ["openai", "openrouter", "anthropic", "ollama"];
+    if !supported_providers.contains(&provider.as_str()) {
+        warnings.push(format!(
+            "ai.provider `{}` is not recognised. Supported: {}",
+            cfg.ai.provider,
+            supported_providers.join(", ")
+        ));
+    }
+
+    // API key required for cloud providers
+    let needs_key = matches!(provider.as_str(), "openai" | "openrouter" | "anthropic");
+    if needs_key {
+        let key_missing = cfg.ai.api_key.as_deref().map(|k| k.trim().is_empty()).unwrap_or(true);
+        if key_missing {
+            warnings.push(format!(
+                "ai.api_key is empty but provider `{}` requires one. \
+                 Set it with: toolshub config set ai.api_key YOUR_KEY",
+                cfg.ai.provider
+            ));
+        }
+    }
+
+    // Temperature range check
+    if cfg.ai.temperature < 0.0 || cfg.ai.temperature > 2.0 {
+        warnings.push(format!(
+            "ai.temperature is {:.2} which is outside the recommended range [0.0, 2.0]",
+            cfg.ai.temperature
+        ));
+    }
+
+    // Max tokens sanity
+    if cfg.ai.max_tokens == 0 {
+        warnings.push("ai.max_tokens is 0 — responses will be empty. Set it to at least 512.".into());
+    } else if cfg.ai.max_tokens > 32_000 {
+        warnings.push(format!(
+            "ai.max_tokens is {} which is very large and may exceed provider limits",
+            cfg.ai.max_tokens
+        ));
+    }
+
+    if warnings.is_empty() {
+        Ok(())
+    } else {
+        Err(warnings)
+    }
 }

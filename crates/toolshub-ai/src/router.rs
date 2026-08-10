@@ -184,9 +184,12 @@ impl AiRouter {
 
     /// Stream a completion from the first available provider that supports it.
     ///
-    /// Falls back to a normal `complete()` call if the selected provider does
-    /// not support streaming.
+    /// Tokens are printed to stdout as they arrive (via each provider's
+    /// `stream_to_stdout()` implementation). Falls back through the provider
+    /// list if the first available provider fails.
     pub async fn complete_streaming(&self, req: CompletionRequest) -> Result<CompletionResponse> {
+        let mut last_error = None;
+
         for (idx, provider) in self.providers.iter().enumerate() {
             let available = timeout(PROVIDER_TIMEOUT, provider.is_available())
                 .await
@@ -196,44 +199,40 @@ impl AiRouter {
                 continue;
             }
 
-            // Try streaming if the provider supports it.
-            if provider.supports_streaming() {
-                // Downcast to OpenAiProvider to call complete_stream directly.
-                // This is the only provider that currently implements SSE streaming.
-                // We use the complete() path for others.
-                let result = timeout(PROVIDER_TIMEOUT, provider.complete(req.clone())).await;
-                match result {
-                    Ok(Ok(r)) => {
-                        if idx > 0 {
-                            tracing::info!(
-                                "Streaming fallback successful using {} ({})",
-                                provider.name(),
-                                provider.model()
-                            );
-                        }
-                        return Ok(r);
-                    }
-                    Ok(Err(e)) => {
-                        warn!("Streaming provider {} failed: {}", provider.name(), e);
-                        // Fall through to next provider.
-                    }
-                    Err(_) => {
-                        warn!("Streaming provider {} timed out", provider.name());
-                    }
-                }
+            // Use streaming if supported, fall back to regular complete().
+            let fut = if provider.supports_streaming() {
+                provider.stream_to_stdout(req.clone())
             } else {
-                // Provider doesn't stream — use regular complete().
-                match timeout(PROVIDER_TIMEOUT, provider.complete(req.clone())).await {
-                    Ok(Ok(r)) => return Ok(r),
-                    Ok(Err(e)) => warn!("Provider {} failed: {}", provider.name(), e),
-                    Err(_) => warn!("Provider {} timed out", provider.name()),
+                provider.complete(req.clone())
+            };
+
+            match timeout(PROVIDER_TIMEOUT, fut).await {
+                Ok(Ok(r)) => {
+                    if idx > 0 {
+                        tracing::info!(
+                            "Streaming fallback successful using {} ({})",
+                            provider.name(),
+                            provider.model()
+                        );
+                    }
+                    return Ok(r);
+                }
+                Ok(Err(e)) => {
+                    warn!("Provider {} ({}) stream failed: {}", provider.name(), provider.model(), e);
+                    last_error = Some(e);
+                }
+                Err(_) => {
+                    warn!("Provider {} ({}) stream timed out after {}s", provider.name(), provider.model(), PROVIDER_TIMEOUT.as_secs());
+                    last_error = Some(Error::ai_provider(format!(
+                        "Provider {} stream timed out",
+                        provider.name()
+                    )));
                 }
             }
         }
 
-        Err(Error::ai_provider(
-            "All configured providers failed or were unavailable.",
-        ))
+        Err(last_error
+            .unwrap_or_else(|| Error::ai_provider("All configured providers failed or were unavailable.")))
     }
 
     /// Return the name of the active primary provider (e.g. `"openai"`).

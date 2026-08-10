@@ -3,6 +3,8 @@
 //! Scans the command for dangerous patterns (rm -rf, dd, mkfs, etc.),
 //! explains the risk, prompts for confirmation, then runs it with
 //! real-time output forwarding.
+//!
+//! With `--dry-run`, the command is analysed and displayed but never executed.
 
 use colored::Colorize;
 use dialoguer::Confirm;
@@ -18,8 +20,11 @@ use toolshub_safety::{SafetyChecker, SafetyConcern};
 // ── Public entry point ────────────────────────────────────────────────────────
 
 /// Run `toolshub run <command…>`.
+///
+/// When `dry_run` is `true`, the command is safety-checked and printed but
+/// never executed — useful for reviewing a command before committing to it.
 #[instrument(skip(config))]
-pub async fn run(command: &[String], config: &Config) -> anyhow::Result<()> {
+pub async fn run(command: &[String], dry_run: bool, config: &Config) -> anyhow::Result<()> {
     if command.is_empty() {
         anyhow::bail!("No command specified");
     }
@@ -27,7 +32,16 @@ pub async fn run(command: &[String], config: &Config) -> anyhow::Result<()> {
     let full_cmd = command.join(" ");
 
     println!();
-    println!("  {} {}", "◆ Command:".bold().cyan(), full_cmd.bold());
+    if dry_run {
+        println!(
+            "  {} {} {}",
+            "◆ DRY RUN:".bold().yellow(),
+            full_cmd.bold(),
+            "(command will NOT be executed)".dimmed().italic()
+        );
+    } else {
+        println!("  {} {}", "◆ Command:".bold().cyan(), full_cmd.bold());
+    }
     println!("  {}", "─".repeat(60).dimmed());
     println!();
 
@@ -40,7 +54,7 @@ pub async fn run(command: &[String], config: &Config) -> anyhow::Result<()> {
         if !report.is_clean() {
             print_safety_warnings(&report.concerns);
 
-            if report.should_block {
+            if !dry_run && report.should_block {
                 let ok = Confirm::new()
                     .with_prompt("  ⚠  This command may be dangerous. Run anyway?")
                     .default(false)
@@ -52,7 +66,24 @@ pub async fn run(command: &[String], config: &Config) -> anyhow::Result<()> {
                     return Ok(());
                 }
             }
+        } else {
+            println!(
+                "  {} Safety check passed — no dangerous patterns detected.",
+                "✓".green().bold()
+            );
+            println!();
         }
+    }
+
+    // In dry-run mode, show what would run and exit.
+    if dry_run {
+        println!();
+        println!("  {} Would execute:", "▷".yellow().bold());
+        println!("  {}", full_cmd.green().bold());
+        println!();
+        println!("  {}", "Dry run complete — command was not executed.".yellow().italic());
+        println!();
+        return Ok(());
     }
 
     // Execute the command.
