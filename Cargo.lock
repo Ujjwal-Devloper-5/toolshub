@@ -2467,7 +2467,7 @@ checksum = "5d99f8c9a7727884afe522e9bd5edbfc91a3312b36a77b5fb8926e4c31a41801"
 
 [[package]]
 name = "toolshub-ai"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "async-trait",
  "futures",
@@ -2482,7 +2482,7 @@ dependencies = [
 
 [[package]]
 name = "toolshub-cli"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "chrono",
@@ -2513,7 +2513,7 @@ dependencies = [
 
 [[package]]
 name = "toolshub-context"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "serde",
  "serde_json",
@@ -2524,7 +2524,7 @@ dependencies = [
 
 [[package]]
 name = "toolshub-core"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "chrono",
@@ -2543,7 +2543,7 @@ dependencies = [
 
 [[package]]
 name = "toolshub-doc"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "chrono",
  "dirs",
@@ -2557,7 +2557,7 @@ dependencies = [
 
 [[package]]
 name = "toolshub-env"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "chrono",
  "regex",
@@ -2572,7 +2572,7 @@ dependencies = [
 
 [[package]]
 name = "toolshub-memory"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "chrono",
  "serde",
@@ -2587,7 +2587,7 @@ dependencies = [
 
 [[package]]
 name = "toolshub-package"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "async-trait",
  "serde",
@@ -2601,7 +2601,7 @@ dependencies = [
 
 [[package]]
 name = "toolshub-safety"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "serde",
  "serde_json",
@@ -2611,7 +2611,7 @@ dependencies = [
 
 [[package]]
 name = "toolshub-tui"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "crossterm",
  "ratatui",

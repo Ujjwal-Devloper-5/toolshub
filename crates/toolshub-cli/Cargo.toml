@@ -4,7 +4,10 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
-description = "ToolsHub — The Intelligent CLI Operating Companion"
+description.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
 default-run = "toolshub"
 
 [[bin]]
