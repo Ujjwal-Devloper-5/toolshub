@@ -42,3 +42,6 @@ version.ps
 *.swp
 *~
 .DS_Store
+
+# Phase plan files
+phase5.md

@@ -161,7 +161,7 @@ async fn detect_shell(memory: &Option<Arc<MemoryStore>>) -> String {
     std::env::var("SHELL")
         .unwrap_or_default()
         .split('/')
-        .last()
+        .next_back()
         .unwrap_or("bash")
         .to_lowercase()
 }

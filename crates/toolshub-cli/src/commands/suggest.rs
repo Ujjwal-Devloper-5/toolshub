@@ -174,8 +174,8 @@ fn render_plan(raw: &str, config: &Config) {
             }
             step_n += 1;
             current_desc = line
-                .splitn(2, ':')
-                .nth(1)
+                .split_once(':')
+                .map(|x| x.1)
                 .unwrap_or(line)
                 .trim()
                 .to_string();

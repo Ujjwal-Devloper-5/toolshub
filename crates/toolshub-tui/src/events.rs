@@ -83,26 +83,24 @@ pub fn handle_mouse(mouse: MouseEvent, state: &mut AppState) {
             }
         }
         // Click on tab bar — tabs are roughly the top 3 rows
-        MouseEventKind::Down(_) => {
-            if mouse.row <= 2 {
-                // Approximate tab positions based on column
-                let col = mouse.column;
-                let panel = if col < 12 {
-                    ActivePanel::Output
-                } else if col < 22 {
-                    ActivePanel::Tools
-                } else if col < 32 {
-                    ActivePanel::Chat
-                } else if col < 46 {
-                    ActivePanel::Packages
-                } else if col < 60 {
-                    ActivePanel::Services
-                } else {
-                    ActivePanel::Memory
-                };
-                state.active_panel = panel;
-                update_status(state);
-            }
+        MouseEventKind::Down(_) if mouse.row <= 2 => {
+            // Approximate tab positions based on column
+            let col = mouse.column;
+            let panel = if col < 12 {
+                ActivePanel::Output
+            } else if col < 22 {
+                ActivePanel::Tools
+            } else if col < 32 {
+                ActivePanel::Chat
+            } else if col < 46 {
+                ActivePanel::Packages
+            } else if col < 60 {
+                ActivePanel::Services
+            } else {
+                ActivePanel::Memory
+            };
+            state.active_panel = panel;
+            update_status(state);
         }
         _ => {}
     }
